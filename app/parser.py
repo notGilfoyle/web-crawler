@@ -1,20 +1,11 @@
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+
+from app.utils import normalize_url
 
 
 class Parser:
-    """
-    Responsible for parsing HTML pages.
-    """
 
     def parse(self, html: str, base_url: str) -> dict:
-        """
-        Returns:
-        {
-            "title": "...",
-            "links": [...]
-        }
-        """
 
         soup = BeautifulSoup(html, "html.parser")
 
@@ -23,16 +14,16 @@ class Parser:
         if soup.title and soup.title.string:
             title = soup.title.string.strip()
 
-        links = []
+        links = set()
 
         for anchor in soup.find_all("a", href=True):
-            href = anchor["href"]
 
-            absolute_url = urljoin(base_url, href)
+            url = normalize_url(base_url, anchor["href"])
 
-            links.append(absolute_url)
+            if url:
+                links.add(url)
 
         return {
             "title": title,
-            "links": links
+            "links": sorted(links)
         }

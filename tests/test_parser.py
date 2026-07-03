@@ -34,4 +34,6 @@ def test_parse_html():
 
     assert "https://example.com/about" in result["links"]
 
-    assert "https://google.com" in result["links"]
+    assert len(result["links"]) == 2
+
+    assert result["links"] == sorted(result["links"])
