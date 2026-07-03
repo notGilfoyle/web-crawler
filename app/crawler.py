@@ -1,24 +1,23 @@
+import asyncio
+
 from app.fetcher import Fetcher
 from app.frontier import URLFrontier
 from app.parser import Parser
 
 
 class WebCrawler:
-    """
-    Simple Breadth-First Web Crawler.
-    """
 
     def __init__(self):
+
         self.fetcher = Fetcher()
         self.parser = Parser()
         self.frontier = URLFrontier()
 
-        self.visited: set[str] = set()
-        self.results: list[dict] = []
+        self.visited = set()
+        self.results = []
 
     async def crawl(self, seed_url: str, max_depth: int = 2):
 
-        # Reset crawler state
         self.visited.clear()
         self.results.clear()
         self.frontier = URLFrontier()
@@ -29,35 +28,51 @@ class WebCrawler:
 
             url, depth = await self.frontier.get()
 
-            if url in self.visited:
-                continue
+            await self.process_page(
+                url=url,
+                depth=depth,
+                max_depth=max_depth,
+            )
 
-            self.visited.add(url)
+        return self.results
 
-            print(f"Crawling: {url}")
+    async def process_page(
+        self,
+        url: str,
+        depth: int,
+        max_depth: int,
+    ):
 
-            html = await self.fetcher.fetch(url)
+        if url in self.visited:
+            return
 
-            if html is None:
-                continue
+        self.visited.add(url)
 
-            page = self.parser.parse(html, url)
+        print(f"[Depth {depth}] {url}")
 
-            self.results.append({
+        html = await self.fetcher.fetch(url)
+
+        if html is None:
+            return
+
+        page = self.parser.parse(html, url)
+
+        self.results.append(
+            {
                 "url": url,
                 "title": page["title"],
                 "depth": depth,
-            })
+            }
+        )
 
-            if depth >= max_depth:
-                continue
+        if depth >= max_depth:
+            return
 
-            for link in page["links"]:
+        for link in page["links"]:
 
-                if link not in self.visited:
-                    await self.frontier.add(
-                        link,
-                        depth + 1,
-                    )
+            if link not in self.visited:
 
-        return self.results
+                await self.frontier.add(
+                    link,
+                    depth + 1,
+                )
