@@ -1,13 +1,15 @@
+import asyncio
 from fastapi import FastAPI
 
 from app.crawler import WebCrawler
+from app.job_manager import JobManager
 
 app = FastAPI(
     title="Simple Web Crawler"
 )
 
 crawler = WebCrawler()
-
+jobs = JobManager()
 
 @app.get("/")
 async def root():
