@@ -1,40 +1,36 @@
 import httpx
 
+from app.config import DEFAULT_TIMEOUT, USER_AGENT
+
 
 class Fetcher:
-    """
-    Responsible for downloading HTML pages.
-    """
 
-    def __init__(self, timeout: int = 10):
-        self.timeout = timeout
+    def __init__(self):
 
-    async def fetch(self, url: str) -> str | None:
-        """
-        Fetch the HTML content of a URL.
+        self.client = httpx.AsyncClient(
+            timeout=DEFAULT_TIMEOUT,
+            follow_redirects=True,
+            headers={
+                "User-Agent": USER_AGENT,
+            },
+        )
 
-        Returns:
-            HTML string if successful, otherwise None.
-        """
+    async def fetch(self, url: str):
+
         try:
-            async with httpx.AsyncClient(
-                follow_redirects=True,
-                timeout=self.timeout,
-            ) as client:
 
-                response = await client.get(url)
+            response = await self.client.get(url)
 
-                response.raise_for_status()
+            response.raise_for_status()
 
-                return response.text
+            return response.text
 
-        except httpx.HTTPStatusError as e:
-            print(f"HTTP Error ({e.response.status_code}): {url}")
+        except httpx.HTTPError as e:
 
-        except httpx.RequestError as e:
-            print(f"Request Error: {url} ({e})")
+            print(e)
 
-        except Exception as e:
-            print(f"Unexpected Error: {e}")
+            return None
 
-        return None
+    async def close(self):
+
+        await self.client.aclose()

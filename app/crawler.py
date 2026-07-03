@@ -45,6 +45,7 @@ class WebCrawler:
             await self.frontier.queue.put(None)
 
         await asyncio.gather(*tasks)
+        await self.fetcher.close()
 
         return self.results
 
