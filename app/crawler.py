@@ -16,7 +16,14 @@ class WebCrawler:
         self.visited = set()
         self.results = []
 
-    async def crawl(self, seed_url: str, max_depth: int = 2):
+        self.lock = asyncio.Lock()
+
+    async def crawl(
+        self,
+        seed_url: str,
+        max_depth: int = 2,
+        workers: int = 5,
+    ):
 
         self.visited.clear()
         self.results.clear()
@@ -24,17 +31,43 @@ class WebCrawler:
 
         await self.frontier.add(seed_url, 0)
 
-        while not self.frontier.empty():
-
-            url, depth = await self.frontier.get()
-
-            await self.process_page(
-                url=url,
-                depth=depth,
-                max_depth=max_depth,
+        tasks = [
+            asyncio.create_task(
+                self.worker(max_depth)
             )
+            for _ in range(workers)
+        ]
+
+        await self.frontier.queue.join()
+
+        # Tell every worker to exit
+        for _ in range(workers):
+            await self.frontier.queue.put(None)
+
+        await asyncio.gather(*tasks)
 
         return self.results
+
+    async def worker(self, max_depth: int):
+
+        while True:
+
+            item = await self.frontier.queue.get()
+
+            if item is None:
+                self.frontier.queue.task_done()
+                break
+
+            url, depth = item
+
+            try:
+                await self.process_page(
+                    url,
+                    depth,
+                    max_depth,
+                )
+            finally:
+                self.frontier.queue.task_done()
 
     async def process_page(
         self,
@@ -43,10 +76,12 @@ class WebCrawler:
         max_depth: int,
     ):
 
-        if url in self.visited:
-            return
+        async with self.lock:
 
-        self.visited.add(url)
+            if url in self.visited:
+                return
+
+            self.visited.add(url)
 
         print(f"[Depth {depth}] {url}")
 
@@ -70,9 +105,12 @@ class WebCrawler:
 
         for link in page["links"]:
 
-            if link not in self.visited:
+            async with self.lock:
 
-                await self.frontier.add(
-                    link,
-                    depth + 1,
-                )
+                if link in self.visited:
+                    continue
+
+            await self.frontier.add(
+                link,
+                depth + 1,
+            )

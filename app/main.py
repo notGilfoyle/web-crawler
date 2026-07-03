@@ -20,14 +20,16 @@ async def root():
 async def crawl(
     url: str,
     depth: int = 2,
+    workers: int = 5,
 ):
 
     pages = await crawler.crawl(
-        url,
+        seed_url=url,
         max_depth=depth,
+        workers=workers,
     )
 
     return {
-        "pages": pages,
         "visited": len(crawler.visited),
+        "pages": pages,
     }
