@@ -1,12 +1,12 @@
 from fastapi import FastAPI
-from app.fetcher import Fetcher
 
-app = FastAPI(
-    title="Simple Web Crawler",
-    version="1.0.0",
-)
+from app.fetcher import Fetcher
+from app.parser import Parser
+
+app = FastAPI()
 
 fetcher = Fetcher()
+parser = Parser()
 
 
 @app.get("/")
@@ -16,19 +16,9 @@ async def root():
     }
 
 
-@app.get("/health")
-async def health():
-    return {
-        "status": "healthy"
-    }
+@app.get("/parse")
+async def parse(url: str):
 
-
-@app.get("/fetch")
-async def fetch(url: str):
-    """
-    Example:
-    /fetch?url=https://example.com
-    """
     html = await fetcher.fetch(url)
 
     if html is None:
@@ -36,7 +26,6 @@ async def fetch(url: str):
             "success": False
         }
 
-    return {
-        "success": True,
-        "length": len(html)
-    }
+    result = parser.parse(html, url)
+
+    return result
