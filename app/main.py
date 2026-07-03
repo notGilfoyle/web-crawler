@@ -1,15 +1,12 @@
 from fastapi import FastAPI
-from app.frontier import URLFrontier
 
+from app.crawler import WebCrawler
 
-from app.fetcher import Fetcher
-from app.parser import Parser
+app = FastAPI(
+    title="Simple Web Crawler"
+)
 
-app = FastAPI()
-frontier = URLFrontier()
-
-fetcher = Fetcher()
-parser = Parser()
+crawler = WebCrawler()
 
 
 @app.get("/")
@@ -19,30 +16,18 @@ async def root():
     }
 
 
-@app.get("/parse")
-async def parse(url: str):
+@app.get("/crawl")
+async def crawl(
+    url: str,
+    depth: int = 2,
+):
 
-    html = await fetcher.fetch(url)
-
-    if html is None:
-        return {
-            "success": False
-        }
-
-    result = parser.parse(html, url)
-
-    return result
-
-
-@app.get("/frontier")
-async def frontier_demo():
-
-    await frontier.add("https://example.com", 0)
-
-    url, depth = await frontier.get()
+    pages = await crawler.crawl(
+        url,
+        max_depth=depth,
+    )
 
     return {
-        "url": url,
-        "depth": depth,
-        "queue_size": frontier.size()
+        "pages": pages,
+        "visited": len(crawler.visited),
     }
