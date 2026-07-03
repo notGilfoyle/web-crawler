@@ -1,9 +1,12 @@
 from fastapi import FastAPI
+from app.frontier import URLFrontier
+
 
 from app.fetcher import Fetcher
 from app.parser import Parser
 
 app = FastAPI()
+frontier = URLFrontier()
 
 fetcher = Fetcher()
 parser = Parser()
@@ -29,3 +32,17 @@ async def parse(url: str):
     result = parser.parse(html, url)
 
     return result
+
+
+@app.get("/frontier")
+async def frontier_demo():
+
+    await frontier.add("https://example.com", 0)
+
+    url, depth = await frontier.get()
+
+    return {
+        "url": url,
+        "depth": depth,
+        "queue_size": frontier.size()
+    }
